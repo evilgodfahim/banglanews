@@ -1,10 +1,18 @@
-import requests, xml.etree.ElementTree as ET, os
+import requests, xml.etree.ElementTree as ET, os, re
 
 SRC = "https://www.kalerkantho.com/rss.xml"
 FILES = {
     "opinion": "opinion.xml",
     "world": "world.xml"
 }
+
+# remove invalid XML chars
+def clean_xml(text):
+    return re.sub(
+        r'[\x00-\x08\x0b-\x0c\x0e-\x1f\x7f]',
+        '',
+        text
+    )
 
 def load_existing(path):
     if not os.path.exists(path):
@@ -19,8 +27,6 @@ def add_items(root, items):
         link = itm.findtext("link")
         if link not in existing_links:
             channel.append(itm)
-
-    # max 500
     all_items = channel.findall("item")
     for extra in all_items[:-500]:
         channel.remove(extra)
@@ -37,7 +43,10 @@ def save(root, path):
     ET.ElementTree(root).write(path, encoding="utf-8", xml_declaration=True)
 
 r = requests.get(SRC, timeout=30)
-src_root = ET.fromstring(r.content)
+content = r.content.decode('utf-8', errors='ignore')  # decode and ignore bad bytes
+content = clean_xml(content)
+src_root = ET.fromstring(content)
+
 src_items = src_root.find("channel").findall("item")
 
 for key, path in FILES.items():
