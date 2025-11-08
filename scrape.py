@@ -20,23 +20,20 @@ def load_existing(path):
 def add_items(root, items):
     channel = root.find("channel")
     existing_links = {i.findtext("link") for i in channel.findall("item")}
-    
     for entry in items:
-        # Get link from entry.link or entry.id/guid
         link = getattr(entry, "link", None) or getattr(entry, "id", None)
-        if not link or link in existing_links:
+        if not link:
+            print("DEBUG: entry missing link/id =>", entry)
             continue
-
+        link = link.strip()
+        if link in existing_links:
+            continue
         item = ET.Element("item")
         ET.SubElement(item, "title").text = entry.title
         ET.SubElement(item, "link").text = link
         ET.SubElement(item, "pubDate").text = getattr(entry, "published", datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT"))
         ET.SubElement(item, "guid", isPermaLink="false").text = link
-        
-        # Insert at the top
         channel.insert(0, item)
-
-    # Keep max 500 items
     all_items = channel.findall("item")
     for extra in all_items[:-500]:
         channel.remove(extra)
@@ -54,16 +51,19 @@ def filter_entries(entries, key):
             result.append(e)
         elif key == "print" and "/print-edition/" in link:
             result.append(e)
+            print("DEBUG: matched print link ->", link)
     return result
 
-# Parse feed safely
 feed = feedparser.parse(SRC)
-print(f"Total entries in feed: {len(feed.entries)}")  # debug
+print("DEBUG: Total entries in feed:", len(feed.entries))
+for i, entry in enumerate(feed.entries[:20]):
+    link = getattr(entry, "link", None) or getattr(entry, "id", None)
+    print(f"Entry {i} link/id:", link)
 
 for key, path in FILES.items():
     root = load_existing(path)
     filtered = filter_entries(feed.entries, key)
-    print(f"{key}: {len(filtered)} entries matched")  # debug
+    print(f"DEBUG: {key} -> {len(filtered)} entries matched")
     add_items(root, filtered)
     ET.ElementTree(root).write(path, encoding="utf-8", xml_declaration=True)
-    print(f"{path} written successfully")
+    print(f"DEBUG: {path} written")
