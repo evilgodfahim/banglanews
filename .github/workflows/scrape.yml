@@ -1,12 +1,14 @@
 name: scrape
+
 on:
   schedule:
-    - cron: "*/5 * * * *"   # every 30 minutes
+    - cron: "*/5 * * * *"   # every 5 minutes
   workflow_dispatch:
 
 jobs:
   run:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v3
 
@@ -25,6 +27,6 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-          git add opinion.xml world.xml
+          git add opinion.xml world.xml daily_kalerkantho.xml
           git commit -m "update feeds" || echo "no changes"
           git push
