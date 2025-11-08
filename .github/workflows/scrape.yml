@@ -1,4 +1,4 @@
-name: scrape-print-feed
+name: scrape
 
 on:
   schedule:
@@ -8,7 +8,6 @@ on:
 jobs:
   run:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v3
 
@@ -20,10 +19,10 @@ jobs:
       - name: Install dependencies
         run: pip install feedparser
 
-      - name: Run print feed scraper
-        run: python scrape_print.py  # your script name
+      - name: Run scraper
+        run: python scrape.py   # corrected filename
 
-      - name: Commit and push print XMLs
+      - name: Commit and push
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
