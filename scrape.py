@@ -7,7 +7,7 @@ SRC = "https://www.kalerkantho.com/rss.xml"
 FILES = {
     "opinion": "opinion.xml",
     "world": "world.xml",
-    "print": "daily_kalerkantho.xml"
+    "print": "daily_kalerkantho.xml"  # keeps your original filename
 }
 
 def load_existing(path):
@@ -37,7 +37,7 @@ def add_items(root, items):
 def filter_entries(entries, key):
     result = []
     for e in entries:
-        link = e.link
+        link = e.link.strip()  # ensure no extra spaces
         if key == "opinion" and any(x in link for x in ["/opinion/", "/editorial/", "/sub-editorial/"]):
             result.append(e)
         elif key == "world" and ("/world/" in link or "/deshe-deshe/" in link):
@@ -49,8 +49,13 @@ def filter_entries(entries, key):
 # Parse feed safely
 feed = feedparser.parse(SRC)
 
+# Debug: show total entries in feed
+print(f"Total entries in feed: {len(feed.entries)}")
+
 for key, path in FILES.items():
     root = load_existing(path)
     filtered = filter_entries(feed.entries, key)
+    print(f"{key}: {len(filtered)} entries matched")  # debug matched entries
     add_items(root, filtered)
     ET.ElementTree(root).write(path, encoding="utf-8", xml_declaration=True)
+    print(f"{path} written successfully")
