@@ -4,66 +4,73 @@ import os
 from datetime import datetime
 
 SRC = "https://www.kalerkantho.com/rss.xml"
-FILES = {
-    "opinion": "opinion.xml",
-    "world": "world.xml",
-    "print": "daily_kalerkantho.xml"
-}
+PRINT_PATHS = ["daily_kalerkantho_part1.xml", "daily_kalerkantho_part2.xml"]
 
-def load_existing(path):
-    if not os.path.exists(path):
-        root = ET.Element("rss", version="2.0")
-        ET.SubElement(root, "channel")
-        return root
-    return ET.parse(path).getroot()
-
-def add_items(root, items):
-    channel = root.find("channel")
-    existing_links = {i.findtext("link") for i in channel.findall("item")}
-    for entry in items:
-        link = getattr(entry, "link", None) or getattr(entry, "id", None)
-        if not link:
-            print("DEBUG: entry missing link/id =>", entry)
-            continue
-        link = link.strip()
-        if link in existing_links:
-            continue
-        item = ET.Element("item")
-        ET.SubElement(item, "title").text = entry.title
-        ET.SubElement(item, "link").text = link
-        ET.SubElement(item, "pubDate").text = getattr(entry, "published", datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT"))
-        ET.SubElement(item, "guid", isPermaLink="false").text = link
-        channel.insert(0, item)
-    all_items = channel.findall("item")
-    for extra in all_items[:-500]:
-        channel.remove(extra)
-
-def filter_entries(entries, key):
+def filter_print_entries(entries):
+    """Return entries matching /print-edition/ only."""
     result = []
     for e in entries:
         link = getattr(e, "link", None) or getattr(e, "id", None)
         if not link:
             continue
         link = link.strip()
-        if key == "opinion" and any(x in link for x in ["/opinion/", "/editorial/", "/sub-editorial/"]):
+        if "/print-edition/" in link:
             result.append(e)
-        elif key == "world" and ("/world/" in link or "/deshe-deshe/" in link):
-            result.append(e)
-        elif key == "print" and "/print-edition/" in link:
-            result.append(e)
-            print("DEBUG: matched print link ->", link)
     return result
 
-feed = feedparser.parse(SRC)
-print("DEBUG: Total entries in feed:", len(feed.entries))
-for i, entry in enumerate(feed.entries[:20]):
-    link = getattr(entry, "link", None) or getattr(entry, "id", None)
-    print(f"Entry {i} link/id:", link)
+def add_items_print(entries, paths):
+    """Add new print entries to two XML files in chunks of 100, avoiding duplicates."""
+    # Collect existing links from all existing print XMLs
+    existing_links = set()
+    for path in paths:
+        if os.path.exists(path):
+            root = ET.parse(path).getroot()
+            channel = root.find("channel")
+            existing_links.update({i.findtext("link") for i in channel.findall("item")})
 
-for key, path in FILES.items():
-    root = load_existing(path)
-    filtered = filter_entries(feed.entries, key)
-    print(f"DEBUG: {key} -> {len(filtered)} entries matched")
-    add_items(root, filtered)
-    ET.ElementTree(root).write(path, encoding="utf-8", xml_declaration=True)
-    print(f"DEBUG: {path} written")
+    # Sort newest first
+    entries_sorted = sorted(entries, key=lambda e: getattr(e, "published_parsed", datetime.utcnow()), reverse=True)
+
+    # Remove duplicates
+    new_entries = []
+    for entry in entries_sorted:
+        link = getattr(entry, "link", None) or getattr(entry, "id", None)
+        if not link:
+            continue
+        link = link.strip()
+        if link in existing_links:
+            continue
+        existing_links.add(link)
+        new_entries.append(entry)
+
+    # Split into chunks of 100 items
+    chunks = [new_entries[i:i+100] for i in range(0, len(new_entries), 100)]
+
+    # Write each chunk to its respective XML file
+    for i, chunk in enumerate(chunks):
+        path = paths[i] if i < len(paths) else f"daily_kalerkantho_part{i+1}.xml"
+        rss_root = ET.Element("rss", version="2.0")
+        channel = ET.SubElement(rss_root, "channel")
+        for entry in chunk:
+            link = getattr(entry, "link", None) or getattr(entry, "id", None)
+            if not link:
+                continue
+            link = link.strip()
+            item = ET.SubElement(channel, "item")
+            ET.SubElement(item, "title").text = entry.title
+            ET.SubElement(item, "link").text = link
+            ET.SubElement(item, "pubDate").text = getattr(entry, "published", datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT"))
+            ET.SubElement(item, "guid", isPermaLink="false").text = link
+        ET.ElementTree(rss_root).write(path, encoding="utf-8", xml_declaration=True)
+        print(f"{path} written with {len(chunk)} items")
+
+# Parse the feed
+feed = feedparser.parse(SRC)
+print(f"Total entries in feed: {len(feed.entries)}")
+
+# Filter /print-edition/ entries
+print_entries = filter_print_entries(feed.entries)
+print(f"Print entries matched: {len(print_entries)}")
+
+# Add to XMLs
+add_items_print(print_entries, PRINT_PATHS)
