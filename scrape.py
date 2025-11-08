@@ -29,7 +29,7 @@ def add_items(root, items):
         ET.SubElement(item, "pubDate").text = entry.published if hasattr(entry, "published") else datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
         ET.SubElement(item, "guid", isPermaLink="false").text = entry.link
 
-    # Keep max 500
+    # Keep max 500 items
     all_items = channel.findall("item")
     for extra in all_items[:-500]:
         channel.remove(extra)
@@ -40,7 +40,7 @@ def filter_entries(entries, key):
         link = e.link
         if key == "opinion" and any(x in link for x in ["/opinion/", "/editorial/", "/sub-editorial/"]):
             result.append(e)
-        elif key == "world" and "/deshe-deshe/" in link:
+        elif key == "world" and ("/world/" in link or "/deshe-deshe/" in link):
             result.append(e)
         elif key == "print" and "/print-edition/" in link:
             result.append(e)
