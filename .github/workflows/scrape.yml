@@ -1,7 +1,7 @@
 name: scrape
 on:
   schedule:
-    - cron: "*/30 * * * *"
+    - cron: "*/30 * * * *"   # every 30 minutes
   workflow_dispatch:
 
 jobs:
@@ -15,13 +15,13 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Install deps
-        run: pip install requests
+      - name: Install dependencies
+        run: pip install feedparser
 
       - name: Run scraper
         run: python scrape.py
 
-      - name: Commit
+      - name: Commit and push
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
