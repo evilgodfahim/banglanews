@@ -1,10 +1,13 @@
-import feedparser, xml.etree.ElementTree as ET, os
+import feedparser
+import xml.etree.ElementTree as ET
+import os
 from datetime import datetime
 
 SRC = "https://www.kalerkantho.com/rss.xml"
 FILES = {
     "opinion": "opinion.xml",
-    "world": "world.xml"
+    "world": "world.xml",
+    "print": "daily_kalerkantho.xml"
 }
 
 def load_existing(path):
@@ -32,7 +35,16 @@ def add_items(root, items):
         channel.remove(extra)
 
 def filter_entries(entries, key):
-    return [e for e in entries if f"/{key}/" in e.link]
+    result = []
+    for e in entries:
+        link = e.link
+        if key == "opinion" and any(x in link for x in ["/opinion/", "/editorial/", "/sub-editorial/"]):
+            result.append(e)
+        elif key == "world" and "/deshe-deshe/" in link:
+            result.append(e)
+        elif key == "print" and "/print-edition/" in link:
+            result.append(e)
+    return result
 
 # Parse feed safely
 feed = feedparser.parse(SRC)
