@@ -1,4 +1,3 @@
-# .github/workflows/scrape.yml
 name: scrape
 
 on:
@@ -30,4 +29,3 @@ jobs:
           git add opinion.xml world.xml daily_kalerkantho_part1.xml daily_kalerkantho_part2.xml
           git commit -m "update feeds" || echo "no changes"
           git push
-```0
