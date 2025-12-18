@@ -6,7 +6,7 @@ from datetime import datetime
 import calendar
 import email.utils
 
-SRC = "https://politepol.com/fd/wpC8lyjp7CVq.xml"
+SRC = "https://politepaul.com/fd/wpC8lyjp7CVq.xml"
 FILES = {
     "opinion": "opinion.xml",
     "world": "world.xml"
